@@ -55,7 +55,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
     // sync tx
     public abstract void beforeBatchSend();
     public abstract boolean sendOneTransaction(TbTrans datum);
-    public abstract boolean updateSendConfirm();
+    public abstract boolean updateTxConfirmCount();
     public abstract boolean updateReceiveConfirm();
     
     // 입출금 테이블
@@ -334,7 +334,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
      * @return
      */
     @Transactional
-    public boolean updateCryptoMaster() {
+    public boolean syncBlockchainMasterTable() {
     	
         TbBlockchainMaster master = getCryptoMaster();
         long blockStartFrom = 0, latestblock = 0;

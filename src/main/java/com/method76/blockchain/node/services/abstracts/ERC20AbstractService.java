@@ -264,7 +264,7 @@ import java.util.Optional;
 	/**
 	 */
 	@Transactional
-    @Override public boolean updateSendConfirm() {
+    @Override public boolean updateTxConfirmCount() {
 		return getPlatformService().updateSendConfirm(getSymbol());
 	}
 

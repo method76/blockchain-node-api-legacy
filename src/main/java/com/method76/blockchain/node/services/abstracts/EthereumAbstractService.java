@@ -274,7 +274,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
      * 출금 CONFIRM수 변경 알림
      */
     @Transactional
-    @Override public boolean updateSendConfirm() {
+    @Override public boolean updateTxConfirmCount() {
         return updateSendConfirm(getSymbol());
     }
     
@@ -587,7 +587,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
             logInfo("SYNC", currentHeight + "=>" + lastestHeight);
             String masteraddr    = getSendaddr();
             Set<String> alladdrs = getAllAddressSetFromNode();
-            
+
             EntityManager em = emf.createEntityManager();
             EntityTransaction etx = em.getTransaction();
             etx.begin();

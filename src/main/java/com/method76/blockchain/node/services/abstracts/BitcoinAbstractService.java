@@ -662,7 +662,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
      * 출금 CONFIRM수 변경 알림
      */
     @Transactional
-    @Override public boolean updateSendConfirm() {
+    @Override public boolean updateTxConfirmCount() {
         boolean success = true;
         // 1) 출금 진행중인 건 조회: TXID가 있고 거래소에 알리지 않은 건
         List<TbTrans> data = getSendTXToUpdate();
