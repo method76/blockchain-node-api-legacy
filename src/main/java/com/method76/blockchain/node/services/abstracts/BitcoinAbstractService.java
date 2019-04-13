@@ -15,6 +15,7 @@ import com.method76.blockchain.node.utils.JsonRpcUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.ClientProtocolException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -44,7 +45,44 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
     @Override public Set<String> getAllAddressSetFromNode() { return null; }
     @Override public List<String> getAllAddressListFromNode() { return null; }
     @Override public boolean syncWalletBalance(int uid) { return true; }
-    
+
+//    @Cacheable
+    public DashboardResponse getDashboardData() {
+        DashboardResponse ret = new DashboardResponse();
+        long startCount = getBlockStartFrom();
+        long bestCount = getBestBlockCount();
+        long syncCount = -1;
+        Optional<TbBlockchainMaster> item = blockchainMasterRepo.findById(getSymbol());
+        if (item.isPresent()) {
+            syncCount = item.get().getSyncHeight();
+        }
+        double balance = getTotalBalance();
+        ret.setResult(startCount, syncCount, bestCount, balance);
+        return ret;
+    }
+
+    public double getTotalBalance() {
+        double ret = 0;
+        try {
+            String resStr = JsonRpcUtil.sendJsonRpcBasicAuth(getRpcurl(),
+                    BitcoinConstant.METHOD_GETBALANCE, null,
+                    getRpcid(), getRpcpw());
+            logInfo(METHOD_GETBALANCE, resStr);
+            BitcoinDoubleResponse res = gson.fromJson(resStr, BitcoinDoubleResponse.class);
+            logDebug(METHOD_GETBALANCE, "res " + resStr);
+            ret = res.getResult();
+            if (res.getError()!=null) {
+                logError(METHOD_GETBALANCE, res.getError());
+                return -1;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            logError(METHOD_NEWADDR, e);
+            return -1;
+        }
+        return ret;
+    }
+
 	/**
 	 * 새 주소 발급
 	 * @param
@@ -77,7 +115,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
     	            ret.getResult().getUid(), getSymbol(),
                     null, res.getResult(), null,
                     ret.getResult().getBrokerId());
-    	    addrBalanceRepo.save(datum);
+    	    addressBalanceRepo.save(datum);
     	    ret.setCode(CODE_SUCCESS);
     	    ret.getResult().setAddress(res.getResult());
     	    
@@ -303,7 +341,8 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
         }
     }
     
-    @Override public long getLatestblockFromChain() {
+    @Override
+    public long getBestBlockCount() {
         BitcoinGeneralResponse res = null;
         try {
             res = gson.fromJson(JsonRpcUtil.sendJsonRpcBasicAuth(getRpcurl(),
@@ -328,7 +367,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
     @Override public boolean openBlocksGetTxsThenSave() {
       
         TbBlockchainMaster master   = getCryptoMaster();
-        long currentHeight      = master.getSynchedHeight();
+        long currentHeight      = master.getSyncHeight();
         long latestHeight       = master.getBestHeight();
         String senderaddr    	= getSendaddr();
         String currentBlockHash = null;
@@ -390,7 +429,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                         return false;
                     } else if (res3.getResult()==null) {
                     	logInfo("SYNC", "finished at " + latestHeight);
-                        master.setSynchedHeight(latestHeight);
+                        master.setSyncHeight(latestHeight);
                         em.merge(master);
                         etx.commit();
                         em.close();
@@ -413,7 +452,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
             ListSinceBlock.Result.Transaction[] txs = res3.getResult().getTransactions();
             if (txs==null || txs.length<1) {
             	logInfo("SYNC", "finished at " + latestHeight);
-                master.setSynchedHeight(latestHeight);
+                master.setSyncHeight(latestHeight);
                 em.merge(master);
                 etx.commit();
                 em.close();
@@ -436,7 +475,8 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                         // 1) 출금처리 START
                         double realfee = Math.abs(tx.getFee()/txs.length);
                         failed = tx.isAbandoned();
-                        TbTrans datum = sendRepo.findFirstBySymbolAndTxidAndToAddrAndRegDtGreaterThanOrderByRegDtDesc
+                        TbTrans datum = transactionRepo.
+                                findFirstBySymbolAndTxidAndToAddrAndRegDtGreaterThanOrderByRegDtDesc
                                 (getSymbol(), txid, tx.getAddress(), getLimitDate());
                         if (datum==null) {
                             // Todo: 에러처리 Insert
@@ -449,7 +489,8 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                         datum.setTxTime(time);
                         if (failed) {
                             if (res3.getError().getMessage()!=null) {
-                                datum.setErrMsg("[" + res3.getError().getCode() + "] " + res3.getError().getMessage());    
+                                datum.setErrMsg("[" + res3.getError().getCode()
+                                        + "] " + res3.getError().getMessage());
                             } else {
                                 datum.setErrMsg(MSG_BLOCK_TX_FAIL);
                             }
@@ -459,10 +500,13 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                     } else if (CATEGORY_RECEIVE.equals(tx.getCategory())) {
                         // 2) 입금처리 START: 외부 주소에서 유저  어드레스로       
                         boolean istomaster = senderaddr!=null && senderaddr.equals(addr);
-                        TbTrans datum = recvRepo.findFirstBySymbolAndTxidAndToAddr(getSymbol(), txid, addr);
+                        TbTrans datum = transactionRepo.
+                                findFirstBySymbolAndTxidAndToAddrAndRegDtGreaterThanOrderByRegDtDesc(
+                                        getSymbol(), txid, addr, getLimitDate());
                         if (datum==null) {
                             // find broker_id, uid, From addr 
-                            List<TbAddressBalance> data = addrBalanceRepo.findBySymbolAndAddr(getSymbol(), tx.getAddress());
+                            List<TbAddressBalance> data = addressBalanceRepo.
+                                    findBySymbolAndAddr(getSymbol(), tx.getAddress());
                             datum = new TbTrans(getSymbol(), null, null,
                                     account, addr, amount);
                             TbAddressBalance tbaddr = data.get(0);
@@ -492,7 +536,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                     
                     txcount++;
                     if (txcount>99) {
-                        master.setSynchedHeight(blockid);
+                        master.setSyncHeight(blockid);
                         em.merge(master);
                         etx.commit();
                         etx.begin();
@@ -500,7 +544,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                     }
                 }
                 logInfo("SYNC", "finished at " + latestHeight);
-                master.setSynchedHeight(latestHeight);
+                master.setSyncHeight(latestHeight);
                 em.merge(master);
                 etx.commit();
                 em.close();
@@ -584,7 +628,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
     }
     
     @Override public double getAddressBalance(String addr) {
-    	List<TbAddressBalance> data = addrBalanceRepo.findBySymbolAndAddr(getSymbol(), addr);
+    	List<TbAddressBalance> data = addressBalanceRepo.findBySymbolAndAddr(getSymbol(), addr);
     	if (data!=null && data.size()>0) { 
     		return data.get(0).getBalance(); 
     	} else {
@@ -643,12 +687,12 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
         for (BitcoinListAddressBalanceResponse.AddressBalance item : res2.getResult()) {
             totalcnt++;
             amount = item.getAmount();
-            List<TbAddressBalance> data = addrBalanceRepo.findBySymbolAndAddr(getSymbol(), 
+            List<TbAddressBalance> data = addressBalanceRepo.findBySymbolAndAddr(getSymbol(),
             		item.getAddress());
             if (data!=null && data.size()>0) {
             	TbAddressBalance datum = data.get(0);
             	datum.setBalance(amount);
-            	addrBalanceRepo.save(datum);
+            	addressBalanceRepo.save(datum);
             } else if (amount>0) {
                 // 잔고가 있을 때만 고아 주소에 INSERT
             	PkSymbolAddr id = new PkSymbolAddr(getSymbol(), item.getAddress());
@@ -701,55 +745,10 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
                 if (notify) {
                     notifySendKafka(datum);
                 }
-                sendRepo.save(datum);
+                transactionRepo.save(datum);
             }
         }
         return success;
     }
-    
-    /**
-     * 입금건 중에 완료건 있는지 조회
-     */
-    @Transactional
-    @Override public boolean updateReceiveConfirm() {
-        boolean success = true;
-        List<TbTrans> data = getRecvTXToUpdate();
-        if (data!=null && data.size()>0) {
-            for (TbTrans datum : data) {
-                boolean notify = false;
-                GetTransaction res = getTransaction(datum.getTxid());
-                if (res.getError()!=null) {
-                    String errMsg = "[" + res.getError().getCode() + "] " + res.getError().getMessage();
-                    logError(METHOD_GETTX, errMsg);
-                    if (res.getError().getCode()==-1) {
-                        // 에러 코드가 -1이면 노드에러가 아니고 IO익셉션인 경우이므로 다음번에 재발송 될 가능성 있음
-                        continue;
-                    } else {
-                        datum.setErrMsg(errMsg);
-                        datum.setNotiCnt(NOTI_CNT_FINISHED);
-                        notify = true;
-                    }
-                    success = false;
-                } else {
-                    if (res.getResult().getConfirmations()>=getMinconfirm()) {
-                        // 완료처리해야 할 것 있는지 조회
-                        datum.setNotiCnt(NOTI_CNT_FINISHED);
-                        notify = true;
-                    } else {
-                        if (datum.getNotiCnt()<NOTI_CNT_PROGRESS) {
-                            datum.setNotiCnt(NOTI_CNT_PROGRESS);
-                            notify = true;
-                        }
-                    }
-                    datum.setConfirm(res.getResult().getConfirmations());
-                    datum.setTxTime(res.getResult().getTime());
-                }
-                if (notify) {
-                    notifyRecvKafka(datum);
-                }
-                recvRepo.save(datum);
-            }
-        }
-        return success;
-    }
+
 }

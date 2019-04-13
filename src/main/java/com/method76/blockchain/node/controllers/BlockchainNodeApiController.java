@@ -2,6 +2,7 @@ package com.method76.blockchain.node.controllers;
 
 import com.method76.blockchain.node.constants.abstracts.BlockchainConstant;
 import com.method76.blockchain.node.gsonObjects.*;
+import com.method76.blockchain.node.services.abstracts.BitcoinAbstractService;
 import com.method76.blockchain.node.services.abstracts.BlockchainRpcService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,13 +18,24 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class BlockchainNodeApiController implements BlockchainConstant {
 
     @Autowired
-    private BlockchainRpcService service;
+    private BitcoinAbstractService service;
+
+    @ResponseBody
+    @RequestMapping(value="/dashboard", method= RequestMethod.POST)
+    public DashboardResponse dashboard() {
+        return service.getDashboardData();
+    }
+
+    @RequestMapping(value="/getnewaccount", method= RequestMethod.POST) @ResponseBody
+    public NewAddressResponse getnewaccount(@RequestBody PersonalInfoRequest param) {
+        return null;
+    }
 
     /**
      * 새 지갑 주소 생성
      */
-    @RequestMapping(value="/address", method= RequestMethod.POST) @ResponseBody
-    public NewAddressResponse address(@RequestBody PersonalInfoRequest param) {
+    @RequestMapping(value="/getnewaddress", method= RequestMethod.POST) @ResponseBody
+    public NewAddressResponse getnewaddress(@RequestBody PersonalInfoRequest param) {
         
         if (param.getUid()<0) {
             NewAddressResponse ret = new NewAddressResponse();
@@ -38,8 +50,8 @@ public class BlockchainNodeApiController implements BlockchainConstant {
     /**
      * 지갑주소 유효성 검증
      */
-    @RequestMapping(value="/validate", method= RequestMethod.POST) @ResponseBody
-    public ValidateAddressResponse validate(@RequestBody PersonalInfoRequest param) {
+    @RequestMapping(value="/validateaddress", method= RequestMethod.POST) @ResponseBody
+    public ValidateAddressResponse validateaddress(@RequestBody PersonalInfoRequest param) {
     	
         if (param.getSymbol()==null || param.getAddress()==null) {
         	// 파라미터 오류
@@ -107,8 +119,8 @@ public class BlockchainNodeApiController implements BlockchainConstant {
     /**
      * 사용자용) 토큰, 암호화폐, 원화, 잔고 조회
      */
-    @RequestMapping(value="/balance", method= RequestMethod.POST) @ResponseBody
-    public CryptoBalanceResponse balance(@RequestBody PersonalInfoRequest param) {
+    @RequestMapping(value="/getbalance", method= RequestMethod.POST) @ResponseBody
+    public CryptoBalanceResponse getbalance(@RequestBody PersonalInfoRequest param) {
     	CryptoBalanceResponse res = new CryptoBalanceResponse();
         if (param.getUid()!=0) {
         	// UID로 조회할 때

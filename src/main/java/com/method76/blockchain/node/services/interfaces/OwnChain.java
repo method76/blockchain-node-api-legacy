@@ -5,7 +5,7 @@ import java.util.Set;
 
 public interface OwnChain {
     boolean openBlocksGetTxsThenSave();
-    long getLatestblockFromChain() throws Exception;
+    long getBestBlockCount() throws Exception;
     long getBlockStartFrom();
     long getMinconfirm();
     List<String> getAllAddressListFromNode();

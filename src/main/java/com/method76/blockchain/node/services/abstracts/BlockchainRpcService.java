@@ -8,8 +8,7 @@ import com.method76.blockchain.node.domain.TbTrans;
 import com.method76.blockchain.node.gsonObjects.*;
 import com.method76.blockchain.node.gsonObjects.bitcoin.RpcError;
 import com.method76.blockchain.node.repositories.AddressBalanceRepository;
-import com.method76.blockchain.node.repositories.CryptoMasterRepository;
-import com.method76.blockchain.node.repositories.RecvRepository;
+import com.method76.blockchain.node.repositories.BlockchainMasterRepository;
 import com.method76.blockchain.node.repositories.TransactionRepository;
 import com.method76.blockchain.node.services.interfaces.OwnChain;
 import com.method76.blockchain.node.services.interfaces.LockableAddress;
@@ -34,58 +33,45 @@ import java.util.Optional;
 public abstract class BlockchainRpcService implements BlockchainConstant {
 
 	public final String TAG = "[" + getSymbol() + "]";
-    protected String[] ENABLED_ERC20S;
-    
+
     // wallet properties
     public abstract String getSymbol();
     public abstract String getRpcurl();
     public abstract String getSendaddr();
-    public abstract double getMinamtgather();
     public abstract int getDecimals();
-    
     public abstract boolean isSendAddrExists();
+    public abstract Object getTransaction(String txid);
     public abstract double getAddressBalance(String address);
-    
+
     public abstract boolean syncWalletBalance(int uid);
     public abstract boolean syncWalletBalances();
-    public abstract Object getTransaction(String txid);
+    public abstract double getMinamtgather();
+
     // open API functions for exchange
     public abstract NewAddressResponse newAddress(PersonalInfoRequest req);
     public abstract ValidateAddressResponse validateAddress(PersonalInfoRequest param);
     // sync tx
     public abstract void beforeBatchSend();
     public abstract boolean sendOneTransaction(TbTrans datum);
+    public abstract DashboardResponse getDashboardData();
     public abstract boolean updateTxConfirmCount();
-    public abstract boolean updateReceiveConfirm();
-    
+    public abstract double getTotalBalance();
+
     // 입출금 테이블
     @Autowired
-    protected AddressBalanceRepository addrBalanceRepo;
+    protected AddressBalanceRepository addressBalanceRepo;
     @Autowired
-    protected RecvRepository recvRepo;
+    protected TransactionRepository transactionRepo;
     @Autowired
-    protected TransactionRepository sendRepo;
-    @Autowired
-    protected CryptoMasterRepository cryptoMasterRepo;
-    @Autowired
-    protected BlockchainRpcService service;
+    protected BlockchainMasterRepository blockchainMasterRepo;
     @Autowired
     private EntityManagerFactory emf;
     protected Gson gson = new Gson();
-    
+
     public List<String> getAllAddressListFromDB() {
-        return addrBalanceRepo.findAddrBySymbol(getSymbol());
+        return addressBalanceRepo.findAddrBySymbol(getSymbol());
     }
-    
-    @Transactional
-    public TbBlockchainMaster getTotalBalance() {
-        Optional<TbBlockchainMaster> ret = cryptoMasterRepo.findById(getSymbol());
-        if (ret.isPresent()) {
-        	return ret.get();
-        }
-        return null;
-    }
-    
+
     /**
      * 공통 배치 출금 
      * @return
@@ -174,7 +160,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
         
         try {
             TbTrans datum = new TbTrans(req);
-            sendRepo.save(datum);
+            transactionRepo.save(datum);
         } catch (Exception e) {
             e.printStackTrace();
             ret.setCode(CODE_FAIL_LOGICAL);
@@ -236,7 +222,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
      * @return
      */
     public List<TbTrans> getToSendList() {
-        return sendRepo.findBySymbolAndTxidIsNullAndErrMsgIsNullAndRegDtGreaterThan
+        return transactionRepo.findBySymbolAndTxidIsNullAndErrMsgIsNullAndRegDtGreaterThan
                 (getSymbol(), getLimitDate());
     }
     /**
@@ -253,20 +239,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
      * @return
      */
     public List<TbTrans> getSendTXToUpdate(String symbol) {
-        return sendRepo.findBySymbolAndTxidIsNotNullAndErrMsgIsNullAndNotiCntLessThanAndRegDtGreaterThan
-                    (symbol, NOTI_CNT_FINISHED, getLimitDate());
-    }
-    
-    /**
-     * 입금알림) 에러가 없고 알림 갯수가 ?미만인 건
-     * @return
-     */
-    public List<TbTrans> getRecvTXToUpdate() {
-        return getRecvTXToUpdate(getSymbol());
-    }
-    
-    public List<TbTrans> getRecvTXToUpdate(String symbol) {
-        return recvRepo.findBySymbolAndErrMsgIsNullAndNotiCntLessThanAndRegDtGreaterThan
+        return transactionRepo.findBySymbolAndTxidIsNotNullAndErrMsgIsNullAndNotiCntLessThanAndRegDtGreaterThan
                     (symbol, NOTI_CNT_FINISHED, getLimitDate());
     }
     
@@ -279,7 +252,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
       
         boolean success1 = true, success2 = true;
         // 1) 출금 실패 건 알림
-        List<TbTrans> data1 = sendRepo.findByErrMsgIsNotNullAndNotiCntLessThanAndRegDtGreaterThan
+        List<TbTrans> data1 = transactionRepo.findByErrMsgIsNotNullAndNotiCntLessThanAndRegDtGreaterThan
                     (NOTI_CNT_FINISHED, getLimitDate());
         if (data1!=null && data1.size()>0) {
             try {
@@ -295,37 +268,13 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
                     }
                     datum.setNotiCnt(NOTI_CNT_FINISHED);
                 }
-                sendRepo.saveAll(data1);
+                transactionRepo.saveAll(data1);
             } catch (Exception e) {
                 success1 = false;
                 e.printStackTrace();
             }
         }
         
-        // 2) 입금 실패 건 알림: 에러 메시지가 있고 알림 카운트가 2가 아닌 껀, 암호화폐 전체
-        List<TbTrans> data2 = recvRepo.findByErrMsgIsNotNullAndNotiCntLessThanAndRegDtGreaterThan
-                    (NOTI_CNT_FINISHED, getLimitDate());
-        if (data2!=null && data2.size()>0) {
-            try {
-                for (TbTrans datum : data2) {
-                    if (datum.getBrokerId()==null || datum.getNotifiable()=='N'
-                                || BROKER_ID_SYSTEM.equals(datum.getBrokerId()) 
-                                || COINBASE_NAME.equals(datum.getFromAddr())) {
-                        // 입금 실패 건 중: 브로커ID가 없거나 알리지 않아야할 수신건, 시스템에서 처리하는 입금건인 경우
-                        datum.setNotifiable('N');
-                    } else {
-                        // 입금 실패건: 일반
-//                        TransactionResponse item = WalletUtil.convertTbRecvToResponse(datum);
-//                        sender.send(TopicId.walletTransmit(datum.getBrokerId()), item);  
-                    }
-                    datum.setNotiCnt(NOTI_CNT_FINISHED);
-                }
-                recvRepo.saveAll(data2);
-            } catch (Exception e) {
-                success2 = false;
-                e.printStackTrace();
-            }
-        }
         return (success1 && success2);
     }
     
@@ -345,7 +294,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
             }
         	
         	if (this instanceof OwnChain) {
-	            blockStartFrom = master.getSynchedHeight();
+	            blockStartFrom = master.getSyncHeight();
 	            if (blockStartFrom<((OwnChain)this).getBlockStartFrom()) {
 	                blockStartFrom = ((OwnChain)this).getBlockStartFrom();
 	            }
@@ -354,10 +303,10 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
 	            	return false;
 	        	}
 	            // get latest blocknum from chain
-	            latestblock = ((OwnChain)this).getLatestblockFromChain();
+	            latestblock = ((OwnChain)this).getBestBlockCount();
 	            if (latestblock>0) {
 	                if (blockStartFrom>latestblock) {
-	                    logError("getLatestblockFromChain", "curr sync height is bigger than bestchain");
+	                    logError("getBestBlockCount", "curr sync height is bigger than bestchain");
 	                } else {
 	                	master.setBestHeight(latestblock);
 	                }
@@ -371,14 +320,14 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
             return false;
         }
         // get latest actual fee
-        TbTrans datum = sendRepo.findFirstBySymbolAndRealFeeGreaterThanOrderByRegDtDesc
+        TbTrans datum = transactionRepo.findFirstBySymbolAndRealFeeGreaterThanOrderByRegDtDesc
         		(getSymbol(), 0);
         double actualFee = 0;
         if (datum!=null && datum.getRealFee()>0) {
             actualFee = datum.getRealFee();
             master.setLastTxFee(actualFee); // 최근 송금 피
         }
-        cryptoMasterRepo.save(master);
+        blockchainMasterRepo.save(master);
         return true;
     }
     
@@ -388,7 +337,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
      */
     @Transactional
     public TbBlockchainMaster getCryptoMaster() {
-        Optional<TbBlockchainMaster> obj = cryptoMasterRepo.findById(getSymbol());
+        Optional<TbBlockchainMaster> obj = blockchainMasterRepo.findById(getSymbol());
         TbBlockchainMaster master = null;
         if (obj.isPresent()) {
             master = obj.get();
@@ -404,7 +353,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
     public NewAddressResponse getSavedAddress(PersonalInfoRequest req) {
     	NewAddressResponse ret = new NewAddressResponse();
     	ret.setResult(req);
-        List<TbAddressBalance> result = addrBalanceRepo.findBySymbolAndUidAndBrokerId(getSymbol(), req.getUid(), req.getBrokerId());
+        List<TbAddressBalance> result = addressBalanceRepo.findBySymbolAndUidAndBrokerId(getSymbol(), req.getUid(), req.getBrokerId());
         // CASE1) TABLE에 동일한 요청이 있으면 기존 생성값 리턴
         if (!result.isEmpty()) {
             if (result.size()==1) {
@@ -430,7 +379,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
     	
     	try {
 	        
-	        List<TbTrans> data1 = sendRepo.findByReNotify('Y');
+	        List<TbTrans> data1 = transactionRepo.findByReNotify('Y');
 	        if (data1!=null && data1.size()>0) {
 	            renotiCnt += data1.size();
 	            for (TbTrans datum : data1) {
@@ -438,18 +387,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
 	                notifySendKafka(datum);
 	                successcnt++;
 	            }
-	            sendRepo.saveAll(data1);
-	        }
-	        
-	        List<TbTrans> data2 = recvRepo.findByReNotify('Y');
-	        if (data2!=null && data2.size()>0) {
-	            renotiCnt += data2.size();
-	            for (TbTrans datum : data2) {
-	                datum.setReNotify('N');
-	                notifyRecvKafka(datum);
-	                successcnt++;
-	            }
-	            recvRepo.saveAll(data2);
+	            transactionRepo.saveAll(data1);
 	        }
 	        if (renotiCnt>0) {
 	            logInfo("reNotify", "success/count " + successcnt + "/" + renotiCnt);

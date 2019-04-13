@@ -2,7 +2,6 @@ package com.method76.blockchain.node.services.abstracts;
 
 import com.method76.blockchain.node.constants.EthereumConstant;
 import com.method76.blockchain.node.domain.TbAddressBalance;
-import com.method76.blockchain.node.domain.TbBlockchainMaster;
 import com.method76.blockchain.node.domain.TbTrans;
 import com.method76.blockchain.node.domain.primarykeys.PkSymbolAddr;
 import com.method76.blockchain.node.gsonObjects.BitcoinStringResponse;
@@ -33,7 +32,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * ETH services
@@ -91,14 +89,14 @@ import java.util.Optional;
             totalbal += actualbal;
             if (addr.equals(senderaddr)) { senderbal = actualbal; }
             
-			List<TbAddressBalance> data = addrBalanceRepo.findBySymbolAndAddr(getSymbol(), addr);
+			List<TbAddressBalance> data = addressBalanceRepo.findBySymbolAndAddr(getSymbol(), addr);
 			if (data!=null && data.size()>0) {
             	if (data.size()>1) {
             		logError("findBySymbolAndAddr", "this should not be happened");
             	}
 				TbAddressBalance datum = data.get(0); 
 				datum.setBalance(actualbal);
-				addrBalanceRepo.save(datum);
+				addressBalanceRepo.save(datum);
 			} else if ((data==null || data.size()<1) && actualbal>0) {
 				PkSymbolAddr id = new PkSymbolAddr(getSymbol(), addr);
 //				Optional<TbOrphanAddress> oraw = orphanAddrRepo.findById(id);
@@ -268,11 +266,6 @@ import java.util.Optional;
 		return getPlatformService().updateSendConfirm(getSymbol());
 	}
 
-	@Transactional
-    @Override public boolean updateReceiveConfirm() {
-		return getPlatformService().updateReceiveConfirm(getSymbol());
-	}
-
 	/**
 	 * Transfer.GAS_LIMIT or BigInteger.valueOf(90000);
 	 * @return
@@ -296,7 +289,7 @@ import java.util.Optional;
 				ret.getResult().getUid(), getSymbol(),
 				null, ret.getResult().getAddress(), null,
 				ret.getResult().getBrokerId());
-		addrBalanceRepo.save(datum);
+		addressBalanceRepo.save(datum);
 		return ret;
 	}
 

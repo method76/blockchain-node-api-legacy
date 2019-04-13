@@ -22,7 +22,7 @@ import java.util.Date;
     @Id
     private String symbol;
     private long bestHeight;
-    private long synchedHeight;
+    private long syncHeight;
     private int decimals;
     private String sendMastAddr;
     private double lastTxFee;
@@ -34,16 +34,16 @@ import java.util.Date;
 	    this.symbol = symbol;
 	    this.sendMastAddr = sendMastAddr;
 	}
-	public TbBlockchainMaster(String symbol, String sendMastAddr, long currSyncHeight
+	public TbBlockchainMaster(String symbol, String sendMastAddr, long syncHeight
 			, long latestHeight) {
 	    this.symbol = symbol;
 	    this.sendMastAddr = sendMastAddr;
-	    this.synchedHeight = currSyncHeight;
+	    this.syncHeight = syncHeight;
 	    this.bestHeight = latestHeight;
 	}
 	
 	@Override public String toString() {
-		return symbol + " " + synchedHeight + " " + bestHeight + " " + updDt;
+		return symbol + " " + syncHeight + " " + bestHeight + " " + updDt;
 	}
 
 }

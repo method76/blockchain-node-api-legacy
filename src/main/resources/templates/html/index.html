@@ -5,6 +5,15 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        nav.navbar { background-color: #dcedc8 !important;
+            -webkit-box-shadow: 12px 12px 19px -15px rgba(0,0,0,0.75);
+            -moz-box-shadow: 12px 12px 19px -15px rgba(0,0,0,0.75);
+            box-shadow: 12px 12px 19px -15px rgba(0,0,0,0.75); }
+        .container-fluid { padding: 20px 20px; }
+        .ellipsis { white-space: nowrap;overflow: hidden;text-overflow: ellipsis; }
+        th { background-color: #dcedc8; }
+    </style>
 </head>
 
 <body>
@@ -13,7 +22,8 @@
     <!-- Image and text -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="#">
-            <img src="/docs/4.3/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">
+            <img src="/img/icon-spring-boot.svg" width="30" height="30"
+                 class="d-inline-block align-top" alt="">
             Blockchain Node Api
         </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,54 +32,107 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="#">Menu 1 <span class="sr-only">(current)</span></a>
                 </li>
             </ul>
         </div>
     </nav>
-    <div>
-        <h5>Synchronized / Best Block Count</h5>
-        <h5>Wallet Balance</h5>
-        <h5>Last Transactions at Here</h5>
-        <table class="table">
-            <thead>
-            <tr>
-                <th scope="col">TX Hash</th>
-                <th scope="col">From</th>
-                <th scope="col">To</th>
-                <th scope="col">Amount</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <th scope="row">1</th>
-                <td>Mark</td>
-                <td>Otto</td>
-                <td>@mdo</td>
-            </tr>
-            <tr>
-                <th scope="row">2</th>
-                <td>Jacob</td>
-                <td>Thornton</td>
-                <td>@fat</td>
-            </tr>
-            <tr>
-                <th scope="row">3</th>
-                <td>Larry</td>
-                <td>the Bird</td>
-                <td>@twitter</td>
-            </tr>
-            </tbody>
-        </table>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">System Health</h5>
+                        <p class="card-text">
+                            <span id="health"></span>
+                        </p>
+                        <!-- btn-success / btn-danger -->
+                        <button type="button" class="btn btn-success">ON</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Initial -> Synchronized -> Best Block Count</h5>
+                        <p class="card-text"><span id="startCount"></span> -> <span id="syncCount"></span> -> <span id="bestCount"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                        <h5 class="card-title">Wallet Balance</h5>
+                        <p class="card-text"><span id="balance"></span> BTC</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                        <h5 class="card-title">Address Count</h5>
+                        <p class="card-text"><span id="address-count"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                        <h5 class="card-title">Transaction Count</h5>
+                        <p class="card-text"><span id="transaction-count"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 20px;">
+            <div class="col-sm">
+                <h5>Last Transactions at Here</h5>
+                <table class="table table-bordered table-sm">
+                    <thead>
+                    <tr>
+                        <th scope="col">Time</th>
+                        <th scope="col">TX Hash</th>
+                        <th scope="col">From</th>
+                        <th scope="col">To</th>
+                        <th scope="col">Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td scope="row">
+                            1 sec ago
+                        </td>
+                        <td class="ellipsis">
+                            0xdfdb0f483df124b701713dc50f40e690a44548de044223318ec8d046c616c494
+                        </td>
+                        <td>0x91da9dd94da500531731e733651bef14e69843d7</td>
+                        <td>0xfa728202d2a05d9e4ccf7406f72e1b139f031d06</td>
+                        <td>0.00007</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
-<!--<script src="/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>-->
-<!--<script src="/js/jquery-3.4.0.min.js"></script>-->
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.4.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
 <script>
+$(function() {
+    $.post( "/api/v1/dashboard", null, function(data) {
+        console.log('data ' + JSON.stringify(data));
+        // {"code":999,"error":null,
+        // "result":{"startCount":539732,"syncCount":0,"bestCount":571449,"balance":0}}
+        $("#startCount").text(data.result.startCount);
+        $("#syncCount").text(data.result.syncCount);
+        $("#bestCount").text(data.result.bestCount);
+        $("#balance").text(data.result.balance);
+    });
+});
 </script>
 
 </body>

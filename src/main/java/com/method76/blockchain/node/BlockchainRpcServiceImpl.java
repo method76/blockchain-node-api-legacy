@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
  * BTC Services
  * @author sungjoon.kim
  */
-@Service("blockchainRpcService") class BlockchainRpcServiceImpl
-        extends BitcoinAbstractService {
+@Service("blockchainRpcService")
+class BlockchainRpcServiceImpl extends BitcoinAbstractService {
 
 	@Getter private String symbol = SYMBOL_BTC;
     @Getter @Value("${app.crypto.rpcurl}") private String rpcurl;

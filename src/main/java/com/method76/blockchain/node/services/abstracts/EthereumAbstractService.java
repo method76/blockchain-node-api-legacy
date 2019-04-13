@@ -86,7 +86,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
                 ret.getResult().getUid(), getSymbol(),
         		null, res.getResult(), null,
                 ret.getResult().getBrokerId());
-        addrBalanceRepo.save(datum);
+        addressBalanceRepo.save(datum);
         ret.setCode(CODE_SUCCESS);
         ret.getResult().setAddress(res.getResult());
         return ret;      
@@ -232,7 +232,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
             if (addr.equals(senderaddr)) { senderbal = actualbal; }
             
             // 주소로 잔고찾기
-            List<TbAddressBalance> data = addrBalanceRepo.findBySymbolAndAddr(
+            List<TbAddressBalance> data = addressBalanceRepo.findBySymbolAndAddr(
             		getSymbol(), addr);
             
             if (data!=null && data.size()>0) {
@@ -241,7 +241,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
             	}
             	TbAddressBalance datum = data.get(0);
                 datum.setBalance(actualbal);
-                addrBalanceRepo.save(datum);
+                addressBalanceRepo.save(datum);
             } else if ((data==null || data.size()<1) && actualbal>0) {
             	// 잔고가 있을 때만 고아주소 테이블에 INSERT
             }
@@ -255,14 +255,14 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
     @Override public boolean syncWalletBalance(int uid) {
         try {
 	        PkSymbolUid id = new PkSymbolUid(uid, getSymbol());
-	        Optional<TbAddressBalance> rawdatum = addrBalanceRepo.findById(id);
+	        Optional<TbAddressBalance> rawdatum = addressBalanceRepo.findById(id);
 	        if (!rawdatum.isPresent()) { 
 	        	return false; 
 	        }
 	        TbAddressBalance datum = rawdatum.get();
 	    	double actual = getAddressBalance(datum.getAddr());
 	    	datum.setBalance(actual);
-	    	addrBalanceRepo.save(datum);
+	    	addressBalanceRepo.save(datum);
 	        return true;
         } catch(Exception e) {
         	e.printStackTrace();
@@ -346,75 +346,8 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
                 if (notify) {
                     notifySendKafka(datum);
                 }
-                sendRepo.save(datum);
+                transactionRepo.save(datum);
             }
-        }
-        return success;
-    }
-    
-    @Transactional
-    @Override public boolean updateReceiveConfirm() {
-        return updateReceiveConfirm(getSymbol());
-    }
-    
-    /**
-     * 입금건 중에 완료건 있는지 조회
-     */
-    public boolean updateReceiveConfirm(String symbol) {
-      
-        boolean success = true;
-        TbBlockchainMaster master = getCryptoMaster();
-        long lastestHeight    = master.getBestHeight();
-        List<TbTrans> data     = getRecvTXToUpdate(symbol);
-        
-        if (data!=null && data.size()>0) {
-            for (TbTrans datum : data) {
-                boolean notify = false;
-                long currHeight = 0, confirm = 0;
-                EthTxReceipt res = getTransaction(datum.getTxid());
-                if (res.getError()!=null) {
-                    String errMsg = "[" + res.getError().getCode() + "] " + res.getError().getMessage();
-                    logError(METHOD_GETTX, errMsg);
-                    if (res.getError().getCode()==-1) {
-                        // 에러 코드가 -1이면 노드에러가 아니고 IO익셉션인 경우이므로 다음번에 재발송 될 가능성 있음
-                        continue;
-                    } else {
-                        datum.setErrMsg(errMsg);
-                        datum.setNotiCnt(NOTI_CNT_FINISHED);
-                        notify = true;
-                    }
-                    success = false;
-                } else if (res.getResult()!=null && ERR_ETH_TX_FAIL.equals(res.getResult().getStatus())) {
-                    // 실패한 트랜잭션
-                    datum.setNotiCnt(NOTI_CNT_FINISHED);
-                    datum.setErrMsg(MSG_BLOCK_TX_FAIL);
-                    success = false;
-                    notify = true;
-                } else {
-                	// 성공한 트랜잭션
-                    currHeight = Long.parseLong(datum.getBlockId());
-                    confirm = lastestHeight - currHeight;
-                    if (confirm>=getMinconfirm()) {
-                        // 완료처리해야 할 것 있는지 조회
-                        datum.setNotiCnt(NOTI_CNT_FINISHED);
-                        notify = true;
-                    } else {
-                        // 미완료 건 중 알림회수 0인 경우
-                        if (datum.getNotiCnt()<NOTI_CNT_PROGRESS) {
-                            datum.setNotiCnt(NOTI_CNT_PROGRESS);
-                            notify = true;
-                        }
-                    }
-                    datum.setConfirm(confirm);
-                    if (datum.getNotifiable()=='N') {
-                        notify = false;
-                    }
-                }
-                if (notify) {
-                    notifyRecvKafka(datum);
-                }
-            }
-            recvRepo.saveAll(data);
         }
         return success;
     }
@@ -431,7 +364,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
         }
     }
     
-    @Override public long getLatestblockFromChain() {
+    @Override public long getBestBlockCount() {
         BitcoinStringResponse res = null;
         try {
             String resStr = JsonRpcUtil.sendJsonRpc2(getRpcurl(),
@@ -479,7 +412,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
             TbBlockchainMaster master = getCryptoMaster();
             master.setLastGasPrice(Convert.fromWei(new BigDecimal(gasPrice),
             		Unit.GWEI).doubleValue());
-            cryptoMasterRepo.save(master);
+            blockchainMasterRepo.save(master);
         }
     }
 
@@ -577,7 +510,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
     public boolean openBlocksGetTxsThenSaveSingle() {
         
         TbBlockchainMaster master = getCryptoMaster();
-        long currentHeight = master.getSynchedHeight();
+        long currentHeight = master.getSyncHeight();
         long lastestHeight = master.getBestHeight();
         
         if (currentHeight<lastestHeight) {
@@ -656,7 +589,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
                             // 출금) 마스터 어카운트에서 어드레스로
                             double actualFee = JsonRpcUtil.hexToWei(res3.getResult().getGasUsed())
                                     / 1 * JsonRpcUtil.hexToWei(tx.getGasPrice());
-                            TbTrans datum = sendRepo.findFirstBySymbolAndTxidAndToAddrAndRegDtGreaterThanOrderByRegDtDesc
+                            TbTrans datum = transactionRepo.findFirstBySymbolAndTxidAndToAddrAndRegDtGreaterThanOrderByRegDtDesc
                                       (getSymbol(), tx.getHash(), toaddr, getLimitDate());
                             if (datum==null) {
 //                                TbSendRequest reqdatum = sendReqRepo.findFirstBySymbolAndToAddrAndRegDtGreaterThanOrderByRegDtDesc
@@ -690,11 +623,12 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
     
                         if (isreceive || isgenerated) {
                             // 입금건) 입금자 유저  어드레스인 거래건: 
-                            TbTrans datum = recvRepo.findFirstBySymbolAndTxidAndToAddr(
-                            		getSymbol(), tx.getHash(), tx.getTo());
+                            TbTrans datum = transactionRepo.
+                                    findFirstBySymbolAndTxidAndToAddrAndRegDtGreaterThanOrderByRegDtDesc(
+                            		getSymbol(), tx.getHash(), tx.getTo(), getLimitDate());
                             if (datum==null) {
                                 // find broker_id, uid, From addr 
-                            	List<TbAddressBalance> data = addrBalanceRepo.findBySymbolAndAddr(getSymbol(), toaddr);
+                            	List<TbAddressBalance> data = addressBalanceRepo.findBySymbolAndAddr(getSymbol(), toaddr);
                                 datum = new TbTrans(getSymbol(),
                                         null, null,
                                         null, toaddr, amount);
@@ -732,14 +666,14 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
                     blockcount++;
                     if (blockcount>99) {
                         logInfo("SYNC", blockid);
-                        master.setSynchedHeight(i);
+                        master.setSyncHeight(i);
                         em.merge(master);
                         etx.commit();
                         etx.begin();
                         blockcount = 0;
                     }
                 }
-                master.setSynchedHeight(lastestHeight);
+                master.setSyncHeight(lastestHeight);
                 em.merge(master);
                 if (etx.isActive()) {
                     etx.commit();
