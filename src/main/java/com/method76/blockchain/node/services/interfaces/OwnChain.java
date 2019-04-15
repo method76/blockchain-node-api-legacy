@@ -4,10 +4,12 @@ import java.util.List;
 import java.util.Set;
 
 public interface OwnChain {
+
     boolean openBlocksGetTxsThenSave();
     long getBestBlockCount() throws Exception;
-    long getBlockStartFrom();
+    long getBlockstartfrom();
     long getMinconfirm();
+
     List<String> getAllAddressListFromNode();
     Set<String> getAllAddressSetFromNode();
 }

@@ -56,8 +56,8 @@ import java.util.List;
 	@Override public String getPp() {
 		return getPlatformService().getPp();
 	}
-	@Override public String getSendaddr() {
-		return getPlatformService().getSendaddr();
+	@Override public String getOwneraddress() {
+		return getPlatformService().getOwneraddress();
 	}
     @Override public boolean isSendAddrExists() {
     	return getPlatformService().isSendAddrExists();
@@ -78,7 +78,7 @@ import java.util.List;
         List<String> list = getPlatformService().getAllAddressListFromNode();
         if (list==null || list.size()<1) { return true; }
         
-        String senderaddr = getSendaddr();
+        String senderaddr = getOwneraddress();
         double totalbal = 0, senderbal = 0;
         int successcount = 0;
         int totalcount = list.size();
@@ -120,7 +120,7 @@ import java.util.List;
 		logInfo("SendOneTransaction", "Started");
 		try {
 			String fromaddr = (datum.getFromAddr()!=null && datum.getFromAddr().length() > 3) 
-					? datum.getFromAddr():getSendaddr();
+					? datum.getFromAddr(): getOwneraddress();
 			String method = (datum.getFromAddr()==null||datum.getFromAddr().length()>3)
 					?ERC_TRANSFER_CODE:ERC_TRANSFERFROM_CODE;
 			String txId = transferWithDataField(method, fromaddr, datum.getToAddr(), 
@@ -158,7 +158,7 @@ import java.util.List;
 	 * @throws Exception
 	 */
 	public String transfer(String toaddr, double rawamount) throws Exception {
-		return transferWithDataField(ERC_TRANSFER_CODE, getSendaddr(), toaddr, rawamount);
+		return transferWithDataField(ERC_TRANSFER_CODE, getOwneraddress(), toaddr, rawamount);
 	}
 
 	public String transferFrom(String fromaddr, String toaddr, double rawamount) throws Exception {
@@ -222,8 +222,8 @@ import java.util.List;
 					Collections.singletonList(new Address(addr)),
 					Collections.singletonList(new TypeReference<Uint256>() {
 					}));
-//			log.debug(getSendaddr() + " " + getContractaddr());
-			String resStr = callSmartContract(function, getSendaddr(), getContractaddr());
+//			log.debug(getOwneraddress() + " " + getContractaddr());
+			String resStr = callSmartContract(function, getOwneraddress(), getContractaddr());
 //			log.debug("getAddressBalance " + resStr);
 			List<Type> res = FunctionReturnDecoder.decode(resStr, function.getOutputParameters());
 			return (double) new BigDecimal((BigInteger) res.get(0).getValue())

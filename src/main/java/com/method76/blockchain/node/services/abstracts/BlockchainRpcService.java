@@ -37,7 +37,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
     // wallet properties
     public abstract String getSymbol();
     public abstract String getRpcurl();
-    public abstract String getSendaddr();
+    public abstract String getOwneraddress();
     public abstract int getDecimals();
     public abstract boolean isSendAddrExists();
     public abstract Object getTransaction(String txid);
@@ -149,7 +149,7 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
             // 2018-07-25 sungjoon.kim 비트계열 출금어카운트를 유저어카운트로 변경
             req.setFromAccount(((BitcoinAbstractService)this).getUseraccount());
         } else if (req.getFromAddress()==null) {
-            req.setFromAddress(this.getSendaddr());  
+            req.setFromAddress(this.getOwneraddress());
         }
         if (SYMBOL_BCD.equals(getSymbol())) {
             // sungjoon) BCD는 소수점 5자리 이하 송금 시 에러 발생하여 긴급 조치
@@ -286,32 +286,32 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
     public boolean syncBlockchainMasterTable() {
     	
         TbBlockchainMaster master = getCryptoMaster();
-        long blockStartFrom = 0, latestblock = 0;
+        long blockstartfrom = 0, latestblock = 0;
         try {
         	master.setDecimals(getDecimals());
         	if (isSendAddrExists()) {
-            	master.setSendMastAddr(getSendaddr());
+            	master.setSendMastAddr(getOwneraddress());
             }
         	
         	if (this instanceof OwnChain) {
-	            blockStartFrom = master.getSyncHeight();
-	            if (blockStartFrom<((OwnChain)this).getBlockStartFrom()) {
-	                blockStartFrom = ((OwnChain)this).getBlockStartFrom();
+	            blockstartfrom = master.getSyncHeight();
+	            if (blockstartfrom<((OwnChain)this).getBlockstartfrom()) {
+	                blockstartfrom = ((OwnChain)this).getBlockstartfrom();
 	            }
-	            if (blockStartFrom<1) {
-	            	logError("getBlockStartFrom", "couldn't find blockStartFrom property");
+	            if (blockstartfrom<1) {
+	            	logError("getBlockstartfrom", "couldn't find blockstartfrom property");
 	            	return false;
 	        	}
 	            // get latest blocknum from chain
 	            latestblock = ((OwnChain)this).getBestBlockCount();
 	            if (latestblock>0) {
-	                if (blockStartFrom>latestblock) {
+	                if (blockstartfrom>latestblock) {
 	                    logError("getBestBlockCount", "curr sync height is bigger than bestchain");
 	                } else {
 	                	master.setBestHeight(latestblock);
 	                }
 	            } else {
-	                master.setBestHeight(blockStartFrom);
+	                master.setBestHeight(blockstartfrom);
 	            }
         	}
             
@@ -342,10 +342,10 @@ public abstract class BlockchainRpcService implements BlockchainConstant {
         if (obj.isPresent()) {
             master = obj.get();
         } else if (this instanceof OwnChain) {
-            master = new TbBlockchainMaster(getSymbol(), getSendaddr(), ((OwnChain)this).getBlockStartFrom()
-            		, ((OwnChain)this).getBlockStartFrom());
+            master = new TbBlockchainMaster(getSymbol(), getOwneraddress(), ((OwnChain)this).getBlockstartfrom()
+            		, ((OwnChain)this).getBlockstartfrom());
         } else {
-        	master = new TbBlockchainMaster(getSymbol(), getSendaddr());
+        	master = new TbBlockchainMaster(getSymbol(), getOwneraddress());
         }
         return master;
     }

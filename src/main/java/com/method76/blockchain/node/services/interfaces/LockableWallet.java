@@ -6,6 +6,6 @@ public interface LockableWallet {
     boolean walletpassphraseshort();
     boolean walletpassphrase(String interval);
     boolean walletlock();
-    String getPp();
+    String getPassphrase();
     
 }

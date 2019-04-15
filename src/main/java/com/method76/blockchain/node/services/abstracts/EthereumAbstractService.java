@@ -143,7 +143,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
     
     @Override public boolean isSendAddrExists() {
     	List<String> alladdrs = getAllAddressListFromNode();
-    	if (alladdrs!=null && alladdrs.contains(getSendaddr())) {
+    	if (alladdrs!=null && alladdrs.contains(getOwneraddress())) {
     		return true;
     	} else {
     		return false;
@@ -181,7 +181,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
         BitcoinStringResponse res = null;
         JSONObject params = new JSONObject();
         
-        String from = (datum.getFromAddr()==null||"".equals(datum.getFromAddr()))?getSendaddr()
+        String from = (datum.getFromAddr()==null||"".equals(datum.getFromAddr()))? getOwneraddress()
         		:datum.getFromAddr();
         double amountEth = datum.getAmount(); 
         params.put("from",     from);
@@ -220,7 +220,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
         List<String> list = getAllAddressListFromNode();
         if (list==null || list.size()<1) { return true; }
         
-        String senderaddr = getSendaddr();
+        String senderaddr = getOwneraddress();
         double totalbal = 0, senderbal = 0;
         int successcount = 0;
         int totalcount = list.size();
@@ -518,7 +518,7 @@ public abstract class EthereumAbstractService extends BlockchainRpcService imple
             // 동기화 할 블럭이 있으면          
             int blockcount = 0; 
             logInfo("SYNC", currentHeight + "=>" + lastestHeight);
-            String masteraddr    = getSendaddr();
+            String masteraddr    = getOwneraddress();
             Set<String> alladdrs = getAllAddressSetFromNode();
 
             EntityManager em = emf.createEntityManager();

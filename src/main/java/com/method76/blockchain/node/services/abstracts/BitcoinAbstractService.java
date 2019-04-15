@@ -15,7 +15,6 @@ import com.method76.blockchain.node.utils.JsonRpcUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.ClientProtocolException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -49,7 +48,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
 //    @Cacheable
     public DashboardResponse getDashboardData() {
         DashboardResponse ret = new DashboardResponse();
-        long startCount = getBlockStartFrom();
+        long startCount = getBlockstartfrom();
         long bestCount = getBestBlockCount();
         long syncCount = -1;
         Optional<TbBlockchainMaster> item = blockchainMasterRepo.findById(getSymbol());
@@ -58,6 +57,34 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
         }
         double balance = getTotalBalance();
         ret.setResult(startCount, syncCount, bestCount, balance);
+        return ret;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public BitcoinLongResponse bestBlockCount() {
+        BitcoinLongResponse ret = new BitcoinLongResponse();
+        try {
+            ret.setResult(getBestBlockCount());
+        } catch (Exception e) {
+            ret.setResult(-1);
+            ret.setCode(-1);
+            ret.setError("" + e.getMessage());
+        }
+        return ret;
+    }
+
+    public BitcoinLongResponse createWallet() {
+        BitcoinLongResponse ret = new BitcoinLongResponse();
+        try {
+            ret.setResult(getBestBlockCount());
+        } catch (Exception e) {
+            ret.setResult(-1);
+            ret.setCode(-1);
+            ret.setError("" + e.getMessage());
+        }
         return ret;
     }
 
@@ -130,7 +157,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
 	}
     
     @Override public boolean isSendAddrExists() {
-    	String propSendAddr = getSendaddr();
+    	String propSendAddr = getOwneraddress();
         BitcoinGeneralResponse res = null;
         String[] params = new String[1];
         params[0] = "\"" + getUseraccount() + "\"";
@@ -293,7 +320,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
         // 1) WalletPassphrase => params: passphrase(string), seconds(number) => result: null 
     	BitcoinStringResponse res = null; 
         String[] params = new String[2];
-        params[0] = "\"" + getPp() + "\"";
+        params[0] = "\"" + getPassphrase() + "\"";
         params[1] = interval;
         try {
             String resStr = JsonRpcUtil.sendJsonRpcBasicAuth(getRpcurl(),
@@ -369,7 +396,7 @@ public abstract class BitcoinAbstractService extends BlockchainRpcService
         TbBlockchainMaster master   = getCryptoMaster();
         long currentHeight      = master.getSyncHeight();
         long latestHeight       = master.getBestHeight();
-        String senderaddr    	= getSendaddr();
+        String senderaddr    	= getOwneraddress();
         String currentBlockHash = null;
         
         // 동기화 할 블럭이 있으면

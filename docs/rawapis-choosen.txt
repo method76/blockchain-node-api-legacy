@@ -1,0 +1,22 @@
+- GetBlockCount: returns the number of blocks in the local best block chain.
+- GetBlock: gets a block with a particular header hash from the local block database either as a JSON object or as a serialized block. Updated in 0.13.0
+- ListReceivedByAddress: lists the total number of bitcoins received by each address.
+- ListSinceBlock: gets all transactions affecting the wallet which have occurred since a particular block, plus the header hash of a block at a particular depth.
+- ListTransactions: returns the most recent transactions that affect the wallet. Updated in 0.12.1
+- GetTransaction: gets detailed information about an in-wallet transaction. Updated in 0.12.0
+- GetReceivedByAddress: returns the total amount received by the specified address in transactions with the specified number of confirmations. It does not count coinbase transactions.
+- GetBalance: gets the balance in decimal bitcoins across all accounts or for a particular account.
+- GetNewAddress: returns a new Bitcoin address for receiving payments. If an account is specified, payments received with the address will be credited to that account.
+- GetAccount: returns the name of the account associated with the given address.
+- EncryptWallet: encrypts the wallet with a passphrase. This is only to enable encryption for the first time. After encryption is enabled, you will need to enter the passphrase to use private keys.
+- ValidateAddress: returns information about the given Bitcoin address. Updated in 0.13.0
+- SendMany: creates and broadcasts a transaction which sends outputs to multiple addresses.
+- SendToAddress: spends an amount to a given address.
+- WalletLock: removes the wallet encryption key from memory, locking the wallet. After calling this method, you will need to call walletpassphrase again before being able to call any methods which require the wallet to be unlocked.
+- WalletPassphrase: stores the wallet decryption key in memory for the indicated number of seconds. Issuing the walletpassphrase command while the wallet is already unlocked will set a new unlock time that overrides the old one.
+- WalletPassphraseChange: changes the wallet passphrase from ‘old passphrase’ to ‘new passphrase’.
+
+
+- CreateRawTransaction: creates an unsigned serialized transaction that spends a previous output to a new output with a P2PKH or P2SH address. The transaction is not stored in the wallet or transmitted to the network.
+- SendRawTransaction: validates a transaction and broadcasts it to the peer-to-peer network.
+- SignRawTransaction: signs a transaction in the serialized transaction format using private keys stored in the wallet or provided in the call.

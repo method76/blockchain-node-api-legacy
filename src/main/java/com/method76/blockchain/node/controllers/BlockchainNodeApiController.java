@@ -26,6 +26,20 @@ public class BlockchainNodeApiController implements BlockchainConstant {
         return service.getDashboardData();
     }
 
+    @ResponseBody
+    @RequestMapping(value="/getblockcount", method= RequestMethod.POST)
+    public BitcoinLongResponse getblockcount() {
+        // ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        return service.bestBlockCount();
+    }
+
+    @ResponseBody
+    @RequestMapping(value="/createwallet", method= RequestMethod.POST)
+    public BitcoinLongResponse createwallet() {
+        // ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        return service.createWallet();
+    }
+
     @RequestMapping(value="/getnewaccount", method= RequestMethod.POST) @ResponseBody
     public NewAddressResponse getnewaccount(@RequestBody PersonalInfoRequest param) {
         return null;
